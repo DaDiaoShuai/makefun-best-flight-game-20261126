@@ -4,7 +4,7 @@
    buildDossier from vendor/makefun-game.ts, exactly as the kit asks.
    Standard library only; no network, no installs. */
 
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDossier } from "./vendor/makefun-game.ts";
@@ -13,8 +13,13 @@ const repoRoot = dirname(fileURLToPath(import.meta.url));
 const outputDir = process.env.MAKEFUN_OUTPUT_DIR || "/output";
 
 function main(): void {
-  if (existsSync(outputDir)) rmSync(outputDir, { recursive: true, force: true });
+  // Clear only the *contents* of the output directory, never the directory
+  // itself: the grader mounts /output as a volume, and removing the mount
+  // point fails with EBUSY ("Device or resource busy"), exit code 1.
   mkdirSync(outputDir, { recursive: true });
+  for (const entry of readdirSync(outputDir)) {
+    rmSync(join(outputDir, entry), { recursive: true, force: true });
+  }
 
   for (const name of ["game", "screenshots"]) {
     const src = join(repoRoot, name);
